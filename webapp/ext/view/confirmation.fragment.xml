@@ -1,0 +1,105 @@
+<c:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:c="sap.ui.core"
+    xmlns:f="sap.ui.layout.form"
+>
+    <Dialog
+        id="idConfirma"
+        icon="sap-icon://add-activity-2"
+        title="{i18n>DialogTitle}"
+        titleAlignment="Center"
+    >
+        <subHeader>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <FlexBox
+                    alignItems="Center"
+                    alignContent="Center"
+                    justifyContent="SpaceBetween"
+                >
+                    <Label
+                        text="{i18n>DateSetup}"
+                        labelFor="idSwitchDate"
+                    />
+                    <Switch
+                        id="idSwitchDate"
+                        change="onDateSetupChange"
+                    />
+                </FlexBox>
+            </OverflowToolbar>
+        </subHeader>
+        <Panel>
+            <FlexBox 
+                id="idDateSetup"
+                visible="false"
+                alignItems="Center"
+                alignContent="Center"
+                justifyContent="SpaceAround"
+            >
+                <DatePicker
+                    id="idDateConf"
+                    placeholder="{i18n>DateConf}"
+                />
+            </FlexBox>
+            <FlexBox
+                alignItems="Center"
+                alignContent="Center"
+                justifyContent="SpaceAround"
+            >
+                <Text text="{i18n>PaleteCompleto}">
+                    <layoutData>
+                        <FlexItemData growFactor="10" />
+                    </layoutData>
+                </Text>
+                <Switch
+                    id="idSwitch"
+                    type="AcceptReject"
+                    change="onSwitchChange"
+                >
+                    <layoutData>
+                        <FlexItemData growFactor="1" />
+                    </layoutData>
+                </Switch>
+            </FlexBox>
+            <FlexBox
+                alignItems="Center"
+                alignContent="Center"
+                justifyContent="SpaceAround"
+            >
+                <Text text="{i18n>Quantidade}">
+                    <layoutData>
+                        <FlexItemData growFactor="10" />
+                    </layoutData>
+                </Text>
+                <Input
+                    id="idQtde"
+                    placeholder="{i18n>Qtde}"
+                    width="150px"
+                    type="Number"
+                    liveChange="onInputChange"
+                >
+                    <layoutData>
+                        <FlexItemData growFactor="1" />
+                    </layoutData>
+                </Input>
+            </FlexBox>
+        </Panel>
+        <beginButton>
+            <Button
+                id="btnAccept"
+                text="{i18n>ButtonDialogAccept}"
+                press=".onAccept"
+                type="Emphasized"
+                enabled="false"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancel"
+                text="{i18n>ButtonDialogCancel}"
+                press=".onClose"
+                type="Reject"
+            />
+        </endButton>
+    </Dialog>
+</c:FragmentDefinition>

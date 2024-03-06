@@ -1,0 +1,142 @@
+<c:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:c="sap.ui.core"
+    xmlns:f="sap.ui.layout.form"
+>
+    <Dialog
+        id="idFisicolNC"
+        icon="sap-icon://add-activity-2"
+        title="{i18n>NCFisico}"
+        titleAlignment="Center"
+        stretch="true"
+    >
+        <subHeader>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <Label
+                    id="lblGroup"
+                    text="Grupo"
+                    design="Bold"
+                    labelFor="idOper"
+                />
+                <Select
+                    id="idOper"
+                    visible="true"
+                    items="{/CatDefFisico}"
+                    change=".onSelectChange"
+                    forceSelection="false"
+                    tooltip=""
+                    modelContextChange=".onOpenFisico"
+                >
+                    <c:ListItem
+                        key="{BOOOperationInternalID}"
+                        text="{OperationText}"
+                    />
+                </Select>
+                <ToolbarSpacer />
+            </OverflowToolbar>
+        </subHeader>
+        <ObjectHeader
+            id="idHeader"
+            title="{InspectionLot}"
+        >
+            <attributes>
+                <ObjectAttribute
+                    text="{ManufacturingOrder}"
+                    title="{i18n>Ordem}"
+                />
+            </attributes>
+        </ObjectHeader>
+        <ScrollContainer
+            vertical="true"
+            horizontal="false"
+            height="100%"
+        >
+            <!-- <Title id="ttlMsg" text="Selecione um grupo" textAlign="Center" width="100%"></Title> -->
+            <Table
+                id="idTblDefeito"
+                items="{ 
+                    path: '/DefeitosFisico',
+                    sorter: [{ 
+                                path: 'InspectionOperation',
+				                descending: false,
+				                group: false
+                             },
+                             { 
+                                path: 'BOOCharacteristic',
+				                descending: false,
+				                group: false
+                            }]
+                        }"
+                mode="None"
+                updateFinished=".onFisico"
+            >
+                <columns>
+                    <Column>
+                        <Text text="Característica" />
+                    </Column>
+                    <Column>
+                        <Text text="Valores" />
+                    </Column>
+                    <Column>
+                        <Text text="Limites" />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text text="{InspectionSpecificationText}" />
+                            <Input
+                                placeholder="{InspectionSpecification}"
+                                type="Number"
+                                liveChange=".onInputLimite"
+                                value="{= ${InspectionResultMeanValue} !== '' ? ${InspectionResultMeanValue} : '' }"
+                                editable="{= ${Closed} === true ? false : true}"
+                            />
+                            <VBox>
+                                <Text
+                                    text="{InspSpecTargetValueText}: {InspSpecTargetValue}"
+                                    visible="{= ${InspSpecTargetValue} > 0 ? true : false}"
+                                />
+                                <Text
+                                    text="{InspSpecUpperLimitText}: {InspSpecUpperLimit}"
+                                    visible="{= ${InspSpecUpperLimit} > 0 ? true : false}"
+                                />
+                                <Text
+                                    text="{InspSpecLowerLimitText}: {InspSpecLowerLimit}"
+                                    visible="{= ${InspSpecLowerLimit} > 0 ? true : false}"
+                                />
+                            </VBox>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </ScrollContainer>
+        <buttons>
+            <Button
+                id="btnClosed"
+                text="{i18n>ButtonDialogEncerraFisico}"
+                icon="sap-icon://complete"
+                press=".onEncerrarFisico"
+                type="Accept"
+                visible="{IsClosable}"
+            />
+            <Button
+                id="btnAccept"
+                text="{i18n>ButtonDialogSalvarFisico}"
+                icon="sap-icon://save"
+                press=".onPostResultsFisico"
+                type="Emphasized"
+            />
+            <Button
+                id="btnCancel"
+                text="{i18n>ButtonDialogCloseFisico}"
+                icon="sap-icon://system-exit"
+                press=".onCloseResultsFisico"
+                type="Reject"
+            />
+        </buttons>
+        <beginButton />
+        <endButton />
+    </Dialog>
+</c:FragmentDefinition>

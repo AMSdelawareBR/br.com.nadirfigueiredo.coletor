@@ -1,0 +1,21 @@
+<core:FragmentDefinition
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core">
+	<SelectDialog
+		id="mySelectDialog"
+		noDataText="No Products Found"
+		title="{i18n>DU}"
+		search="."
+		confirm=".onDuFake"
+		cancel=".onClose"
+		items="{
+			path: '/DUOptions'
+		}">
+		<StandardListItem
+			title="{CharacteristicAttributeCodeTxt}"
+			icon="{CharacAttributeCodeIcon}"
+			iconDensityAware="false"
+			iconInset="false"
+			type="Active" />
+	</SelectDialog>
+</core:FragmentDefinition>

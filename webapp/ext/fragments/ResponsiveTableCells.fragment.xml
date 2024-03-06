@@ -1,0 +1,11 @@
+<core:FragmentDefinition
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m"
+>
+    <HBox justifyContent="SpaceAround">
+        <core:Icon src="sap-icon://inspect-down" color="Negative" press=".onLoteCancel" tooltip="{i18n>LoteCancel}" />
+        <!-- <core:Icon src="sap-icon://inspect" color="Positive" press=".onLoteSkip" visible="{IsSkipAllowed}"/> -->
+        <!-- <core:Icon src="sap-icon://inspect" color="Positive" press=".onLoteSkip" tooltip="{i18n>LoteSkip}" /> -->
+        <core:Icon src="sap-icon://inspection" color="Marker" press=".onInspect" />
+    </HBox>
+</core:FragmentDefinition>

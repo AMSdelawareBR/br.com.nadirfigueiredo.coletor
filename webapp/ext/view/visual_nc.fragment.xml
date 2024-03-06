@@ -1,0 +1,107 @@
+<c:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:c="sap.ui.core"
+    xmlns:f="sap.ui.layout.form"
+>
+    <Dialog
+        id="idVisualNC"
+        icon="sap-icon://add-activity-2"
+        title="{i18n>NCVisual}"
+        titleAlignment="Center"
+        stretch="true"
+        verticalScrolling="false"
+    >
+        <ObjectHeader
+            id="idHeader"
+            title="{InspectionLot}"
+            number="NC: 0"
+        >
+            <attributes>
+                <ObjectAttribute
+                    text="{ManufacturingOrder}"
+                    title="{i18n>Ordem}"
+                />
+            </attributes>
+            <additionalNumbers>
+                <ObjectNumber number="NQA: {QualityAcceptanceLevel}" />
+                <ObjectNumber number="Amostragem: {SampleSize}" />
+            </additionalNumbers>
+        </ObjectHeader>
+        <ScrollContainer
+            vertical="true"
+            horizontal="false"
+            height="70%"
+        >
+            <Table
+                id="idTblDefeito"
+                items="{ 
+                    path: '/DefeitosVisual2',
+                    sorter: [{ 
+                                path: 'MfgActionReasonCodeGroupText',
+				                descending: false,
+				                group: true
+                             },
+                             { 
+                                path: 'ManufacturingActionReasonCode',
+				                descending: false,
+				                group: false
+                            }],
+                    groupHeaderFactory: '.getGroupHeader'}"
+                mode="MultiSelect"
+                selectionChange=".onSelectDefeito"
+                updateStarted=".onUpdateStarted"
+                updateFinished=".onUpdateFinished"
+            >
+                <headerToolbar>
+                    <OverflowToolbar>
+                        <ToolbarSpacer />
+                        <SearchField
+                            liveChange=".onSearchDefeitos"
+                            width="50%"
+                        />
+                        <ToolbarSpacer />
+                    </OverflowToolbar>
+                </headerToolbar>
+                <columns>
+                    <Column>
+                        <Text text="Defeito" />
+                    </Column>
+                    <Column>
+                        <Text text="Quantidades" />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text text="{MfgActionReasonCodeName}" />
+                            <Input
+                                enabled="false"
+                                type="Number"
+                                value="{= ${NumberOfDefects} !== 0 ? ${NumberOfDefects} : 0 }"
+                                change=".onInputNC"
+                            />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </ScrollContainer>
+        <beginButton>
+            <Button
+                id="btnAccept"
+                text="{i18n>ButtonDialogSalvar}"
+                icon="sap-icon://save"
+                press=".onPostResults"
+                type="Emphasized"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancel"
+                text="{i18n>ButtonDialogClose}"
+                icon="sap-icon://system-exit"
+                press=".onCloseResults"
+                type="Reject"
+            />
+        </endButton>
+    </Dialog>
+</c:FragmentDefinition>
