@@ -88,11 +88,21 @@
                             <Text text="{InspectionSpecificationText}" />
                             <Input
                                 placeholder="{InspectionSpecification}"
-                                type="Number"
+                                type="Text"
+                                liveChange=".onInputLimite"
+                                change=".onInputLimiteChange"
+                                value="{path: 'InspectionResultMeanValue', formatter: '.onFormatLimite'}"
+                                editable="{= ${Closed} === true ? false : true}"
+                            />
+                            <!--
+                            <Input
+                                placeholder="{InspectionSpecification}"
+                                type="Text"
                                 liveChange=".onInputLimite"
                                 value="{= ${InspectionResultMeanValue} !== '' ? ${InspectionResultMeanValue} : '' }"
                                 editable="{= ${Closed} === true ? false : true}"
                             />
+                            -->
                             <VBox>
                                 <Text
                                     text="{InspSpecTargetValueText}: {InspSpecTargetValue}"

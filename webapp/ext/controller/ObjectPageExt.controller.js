@@ -12,6 +12,17 @@ sap.ui.define([
 
         },
 
+        onFormatLimite: function(sValue){
+            let sValue2 = sValue;
+            if(sValue2 == "0.000" || sValue2 == "0,000" || sValue2 == "0"){
+                sValue2 = "";
+            }
+
+            //console.log(sValue+" <---> "+sValue2);
+
+            return sValue2;
+        },
+
         onAfterRendering: function (oEvent) {
 
             let oTable = this.getView().byId(this.tableId)
@@ -25,15 +36,38 @@ sap.ui.define([
                 oTable.setGrowingScrollToLoad(true)
 
                 oTable.attachSelect(function (oEvent) {
+                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === '')){
+                        try{
+                            this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("UserDecision"))[0].setEnabled(false)
+                        }catch(e){
+                            // DBR(VCD) 31/05/2024
+                            // Tentando desabilitar o botão usando ID pois no coletor (Honeywell), o método getHeaderToolbar esta retornando null
+                            var sButtonId = "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--onUserDecision";
+                            this.getView().byId(sButtonId).setEnabled(false);
+                        }
+                    }
 
-                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === ''))
-                        this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("UserDecision"))[0].setEnabled(false)
+                    if (oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === '')){
+                        try{
+                          this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Imprimir"))[0].setEnabled(false);
+                        }catch(e){
+                            // DBR(VCD) 31/05/2024
+                            // Tentando desabilitar o botão usando ID pois no coletor (Honeywell), o método getHeaderToolbar esta retornando null
+                            var sButtonId = "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--onImprimirButton";
+                            this.getView().byId(sButtonId).setEnabled(false);
+                        }
+                    }
 
-                    if (oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === ''))
-                        this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Imprimir"))[0].setEnabled(false)
-
-                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsSkipAllowed === false))
-                        this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Skip"))[0].setEnabled(false)
+                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsSkipAllowed === false)){
+                        try{
+                            this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Skip"))[0].setEnabled(false)
+                        }catch(e){
+                            // DBR(VCD) 29/05/2024
+                            // Tentando desabilitar o botão usando ID pois no coletor (Honeywell), o método getHeaderToolbar esta retornando null
+                            var sButtonId = "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--onSkipButton";
+                            this.getView().byId(sButtonId).setEnabled(false);
+                        }
+                    }
 
                 }.bind(this))
             }
@@ -82,13 +116,21 @@ sap.ui.define([
             let oView = this.getView()
             let oObject = oView.getBindingContext().getObject()
 
-            if (oObject.ConfirmationLimit) {
+            // DBR(VCD) 28/03/2024 Funcional: Andreia
+            // Contando quantas linhas tem na tabela
+            let oTable = this.getView().byId(this.tableId);
+            let iLines = oTable.getItems().length;
+
+            //if (oObject.ConfirmationLimit) {
+            if (iLines >= oObject.ConfirmationLimitAdmin) {
                 sap.m.MessageBox.alert(this.getOwnerComponent().getModel("i18n").getResourceBundle().getText("ConfirmationLimit"))
                 return
             }
 
             this.createDialog(oView, "br.com.nadirfigueiredo.qualidadecoletor.ext.view.confirmation").then(function (oDialog) {
-                oDialog.getSubHeader().setVisible(oObject.Manager)
+                // DBR(VCD) 30/03/2024 - Não exibindo a parte de mudança de datas
+                oDialog.getSubHeader().setVisible(false)
+                //oDialog.getSubHeader().setVisible(oObject.Manager)
 
                 oDialog.open()
             });
@@ -159,7 +201,13 @@ sap.ui.define([
                         DataConf: oSwitchDate.getState() ? oDateConf.getDateValue().toISOString() : new Date().toISOString()
                     },
                     success: function (oData, response) {
-                        oTable.refreshAggregation("items")
+                        // DBR(VCD) 09/04/2024
+                        // Caso a tabela não esteja visivel da tela, esse refresh não vai funcionar como é o caso do coletor 
+                        // que tem tela pequena. Dessa forma, o sistema vai ignorar o erro
+                        try {
+                            oTable.refreshAggregation("items")
+                        }catch(e){
+                        }
                         oView.getModel().refresh(true)
                         oApi.refresh()
                         oView.setBusy(false)
@@ -382,13 +430,26 @@ sap.ui.define([
                                 oView.getModel().read("/DefeitosVisual2",
                                     {
                                         filters: [new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)],
+                                        urlParameters: ["$top=1000"], // DBR(VCD) 12/04/2024
                                         success: function (oData, response) {
-                                            oDialog.getButtons()[2].firePress({ "noMsg": oData.results[0].UD })
-                                            if (oData.results[0].UD)
+                                            // DBR(VCD) 22/03/2024 Funcional: Michele
+                                            // O Popup deve ser exibido se qualquer linha tiver X no UD e não somente a primeira
+                                            var UD = "";
+                                            for(var zi in oData.results){
+                                                if(oData.results[zi].UD == 'X'){
+                                                    UD = "X";
+                                                    break;
+                                                }
+                                            }
+                                            oDialog.getButtons()[2].firePress({ "noMsg": UD })
+                                            //oDialog.getButtons()[2].firePress({ "noMsg": oData.results[0].UD })
+                                            if (UD)
+                                            //if (oData.results[0].UD)
                                                 that.showMessages(that.buildMessages(oResponse),
                                                     {
                                                         InspectionLot: oObject.InspectionLot,
-                                                        hasDU: oData.results[0].UD
+                                                        //hasDU: oData.results[0].UD
+                                                        hasDU: UD
                                                     }
                                                 )
                                             oDialog.setBusy(false)
@@ -529,8 +590,17 @@ sap.ui.define([
 
                 oControl.addAttribute(new sap.m.ObjectAttribute({ text: oView.getBindingContext().getObject().WorkCenterLocation }).bindProperty("title", "i18n>Linha"))
                 oControl.addAttribute(new sap.m.ObjectAttribute({ text: oView.getBindingContext().getObject().ArticleValue }).bindProperty("title", "i18n>Artigo"))
-                oDialog.getParent().byId("idTblDefeito").getModel().setSizeLimit(5000)
+                
+                // DBR(VCD) 11/03/2024 Funcional: Andreia
+                // Limitando registros para não causar lentidão
+                oDialog.getParent().byId("idTblDefeito").getModel().setSizeLimit(10)
+
                 oDialog.getParent().byId("idTblDefeito").setSticky([sap.m.Sticky.ColumnHeaders, sap.m.Sticky.HeaderToolbar])
+
+                // DBR(VCD) 22/03/2024 Funcional: Michele
+                if(oObject.OperationStandardTextCode == "ZQM02"){
+                    oDialog.getParent().byId("idOper").getModel().setSizeLimit(100)
+                }
 
                 switch (oObject.OperationStandardTextCode) {
                     case 'ZQM01':
@@ -644,15 +714,19 @@ sap.ui.define([
                 if (iIdx >= 0)
                     aFilters.splice(iIdx, 1)
             }
-            if (sQuery && sQuery.length > 0)
+            if (sQuery && sQuery.length > 0){
                 aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.Contains, sQuery))
-
+                //oEvent.getSource().getParent().getParent().getModel().setSizeLimit(100) // DBR(VCD)
+            }else{
+                //oEvent.getSource().getParent().getParent().getModel().setSizeLimit(10) // DBR(VCD)
+            }
+            
             if (oModel) {
                 oContext = oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
                 for (let oDefeito of oContext.to_Defeitos)
                     aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.EQ, oDefeito.MfgActionReasonCodeName))
             }
-
+            
             oEvent.getSource().getParent().getParent().getBinding("items").filter(aFilters)
             oEvent.getSource().setValue(sQuery)
         },
@@ -779,23 +853,54 @@ sap.ui.define([
                         }
         },
 
+        // DBR(VCD) 22/04/2024
+        onInputLimiteChange: function(oEvent){
+            let sValue = oEvent.getSource().getValue();
+            if(sValue == "0.000"){
+                oEvent.getSource().setValue("");
+            }
+        },
+
         onInputLimite: function (oEvent) {
+            let sValue = oEvent.getSource().getValue();
             let fValue = Number.parseFloat(oEvent.getSource().getValue())
             let oContext = oEvent.getSource().getBindingContext().getObject()
-            if (oContext.InspSpecTargetValue != 0)
-                if (fValue < oContext.InspSpecLowerLimit || fValue > oContext.InspSpecUpperLimit) {
+
+            // DBR(VCD) 22/04/2024
+            if(sValue == "0.000"){
+                oEvent.getSource().setValue("");
+                return;
+            }
+
+            // DBR(VCD) 10/05/2024
+            var fInspSpecTargetValue = parseFloat(oContext.InspSpecTargetValue);
+            var fInspSpecLowerLimit  = parseFloat(oContext.InspSpecLowerLimit);
+            var fInspSpecUpperLimit  = parseFloat(oContext.InspSpecUpperLimit);
+
+            //if (oContext.InspSpecTargetValue != 0){
+            if (fInspSpecTargetValue != 0 || fInspSpecLowerLimit != 0 || fInspSpecUpperLimit != 0){
+
+                // DBR(VCD) 16/05/2024
+                //if (fValue < oContext.InspSpecLowerLimit || fValue > oContext.InspSpecUpperLimit) {
+                if ((fInspSpecLowerLimit != 0 && fValue < fInspSpecLowerLimit) || (fInspSpecUpperLimit != 0 && fValue > fInspSpecUpperLimit)) {
                     oEvent.getSource().setValueState("Error")
                     oEvent.getSource().setValueStateText(this.getOwnerComponent().getModel("i18n").getResourceBundle().getText("Tolerancia"))
                 }
                 else {
                     oEvent.getSource().setValueState("Success")
                 }
-            else
+            }else{
                 if (!fValue) {
                     oEvent.getSource().setValueState("Warning")
                 } else {
                     oEvent.getSource().setValueState("None")
                 }
+            }
+
+            // DBR(VCD) 22/03/2024
+            if (fValue == 0 || fValue == 0.000){
+                oEvent.getSource().setValue("");
+            }
         },
 
         onInputNC: function (oEvent) {
@@ -967,10 +1072,17 @@ sap.ui.define([
                     press: function (oEvent) {
                         this.getParent().close();
                         if (oObject) {
-                            that.createDialog(oView, "br.com.nadirfigueiredo.qualidadecoletor.ext.view.du").then(function (oDialog) {
-                                oDialog.addCustomData(new sap.ui.core.CustomData({ key: "InspectionLot", value: oObject.InspectionLot }))
-                                oDialog.open()
-                            });
+                            if(!that.DUDialog){ // DBR(VCD) 21/03/2024
+                                that.createDialog(oView, "br.com.nadirfigueiredo.qualidadecoletor.ext.view.du").then(function (oDialog) {
+                                    oDialog.addCustomData(new sap.ui.core.CustomData({ key: "InspectionLot", value: oObject.InspectionLot }))
+                                    that.DUDialog = oDialog;// DBR(VCD) 21/03/2024
+                                    oDialog.open()
+                                });
+                            }else{// DBR(VCD) 21/03/2024
+                                that.DUDialog.destroyCustomData();
+                                that.DUDialog.addCustomData(new sap.ui.core.CustomData({ key: "InspectionLot", value: oObject.InspectionLot }));
+                                that.DUDialog.open();
+                            }
                         }
                     },
                     text: "Fechar"
@@ -1178,7 +1290,13 @@ sap.ui.define([
                     method: 'POST',
                     urlParameters: {
                         Plant: oObject.Plant,
-                        InspectionLot: oObject.InspectionLot
+
+                        // DBR(VCD) 29/05/2024
+                        // Enviando ao backend o código de barras digitado e não o lote da linha
+                        // para resolver bug no coletor
+                        //InspectionLot: oObject.InspectionLot
+                        InspectionLot: oEvent.getSource().getValue()
+
                     },
                     success: function (oData, response) {
                         oDialog.setBusy(false)
