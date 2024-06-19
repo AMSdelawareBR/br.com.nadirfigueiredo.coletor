@@ -85,7 +85,8 @@
                 <items>
                     <ColumnListItem>
                         <cells>
-                            <Text text="{InspectionSpecificationText}" />
+                            <Text text="{InspectionSpecificationText}" class="zcaracteristica" />
+
                             <Input
                                 placeholder="{InspectionSpecification}"
                                 type="Text"
@@ -93,6 +94,7 @@
                                 change=".onInputLimiteChange"
                                 value="{path: 'InspectionResultMeanValue', formatter: '.onFormatLimite'}"
                                 editable="{= ${Closed} === true ? false : true}"
+                                class="zinputLimitFisico"
                             />
                             <!--
                             <Input

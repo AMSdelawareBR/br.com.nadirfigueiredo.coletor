@@ -1,3 +1,20 @@
+/*
+jQuery(document).on('click',".zinputLimitFisico input",function(){
+    var oInput          = jQuery(this);
+    var oTr             = oInput.parent().parent().parent().parent();
+    var sCaracteristica = oTr.find(".zcaracteristica").text();
+    
+    sap.ui.core.BusyIndicator.show(1);
+    setTimeout(function(){
+        var sValor = prompt("Informe o campo "+sCaracteristica,oInput.val());
+        if(sValor != null){
+            oInput.val(sValor);
+        }
+        sap.ui.core.BusyIndicator.hide();
+    },1);
+});
+*/
+
 sap.ui.define([
     "sap/m/MessageToast",
     "sap/ndc/BarcodeScanner"
@@ -9,7 +26,7 @@ sap.ui.define([
         tableId: "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--LotCt::responsiveTable",
 
         onInit: function (oEvent) {
-
+            //window.oTable = this.getView().byId(this.tableId);
         },
 
         onFormatLimite: function(sValue){
@@ -717,15 +734,22 @@ sap.ui.define([
             if (sQuery && sQuery.length > 0){
                 aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.Contains, sQuery))
                 //oEvent.getSource().getParent().getParent().getModel().setSizeLimit(100) // DBR(VCD)
+
+                if (oModel) {
+                    oContext = oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
+                    for (let oDefeito of oContext.to_Defeitos)
+                        aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.EQ, oDefeito.MfgActionReasonCodeName))
+                }
             }else{
                 //oEvent.getSource().getParent().getParent().getModel().setSizeLimit(10) // DBR(VCD)
             }
-            
+            /*
             if (oModel) {
                 oContext = oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
                 for (let oDefeito of oContext.to_Defeitos)
                     aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.EQ, oDefeito.MfgActionReasonCodeName))
             }
+            */
             
             oEvent.getSource().getParent().getParent().getBinding("items").filter(aFilters)
             oEvent.getSource().setValue(sQuery)
@@ -738,9 +762,12 @@ sap.ui.define([
             let oTable = oEvent.getSource()
 
             oTable.getParent().getParent().setBusy(true)
-            switch (oEvent.getParameter("reason")) {
+
+            var sReason = oEvent.getParameter("reason");
+            switch (sReason) {
                 case 'Filter':
                     this.getView().byId("idVisualNC").setBusy(false)
+                    this.onFillQuantity(oEvent);
                     break;
                 case 'Refresh':
 
@@ -749,9 +776,10 @@ sap.ui.define([
                         let aFilters = oTable.getBinding("items").aFilters
                         if (!aFilters) aFilters = []
                         if (oTable.getBinding("items").getContexts().some((s) => s.getObject().InspectionLot == oObject.InspectionLot)) {
-
-                            oTable.setMode(sap.m.ListMode.None)
-                            oTable.getParent().getParent().getBeginButton().setVisible(false)
+                            // DBR(VCD) 10/06/2024
+                            // em PRD, esta entrando no IF ao carregar o dialog, em QAS não esta acontecendo isso
+                            //oTable.setMode(sap.m.ListMode.None)
+                            //oTable.getParent().getParent().getBeginButton().setVisible(false)
                         }
                         // } else {
                         //     aFilters.push(new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, '000000000000'))
@@ -831,6 +859,93 @@ sap.ui.define([
             iCount = isNaN(iCount) ? "0" : Number.parseInt(iCount)
             this.getView().byId("idHeader").setNumber("NC: " + iCount)
             // oTable.getParent().getParent().setBusy(false)
+        },
+
+        // DBR(VCD) 11/06/2024
+        // Recarregando os valores da quantidade
+        onFillQuantity: function(oEvent){
+            let oObject
+            let iCount
+            let oModel
+            let oTable = oEvent.getSource()
+
+            iCount = 0;
+            oObject = oTable.getBindingContext()?.getObject()
+            oModel = this.getView().getModel("Defeitos")?.getData()
+
+            oObject.to_Defeitos = []
+            // oObject.InspectionLot = 
+            if (!oModel) {
+                oModel = []
+                oModel.push(oObject)
+            } else {
+                if (!oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata'))))
+                    oModel.push(oObject)
+                else {
+                    oObject = oModel.find((e) => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
+                    if (oObject) {
+                        oObject.to_Defeitos.forEach((e) => {
+                            let oItem = oTable.getItems().find((f) => !f.isGroupHeader() && JSON.stringify(e, Object.keys(e).filter((k) => k !== 'InspectionLot' && k !== 'Quantidade' && k !== '__metadata')) == JSON.stringify(f.getBindingContext().getObject(), Object.keys(f.getBindingContext().getObject()).filter((k) => k !== 'InspectionLot' && k !== 'Quantidade' && k !== '__metadata')))
+                            if (oItem) {
+                                oTable.setSelectedItem(oItem, true)
+                                for (let oControl of oItem.getCells())
+                                    if (oControl instanceof sap.m.Input) {
+                                        let iValue = Number.parseInt(e.Quantidade)
+                                        if (iValue > 0) {
+                                            oControl.setValue(iValue)
+                                            oControl.focus()
+                                            // iCount += iValue
+                                        }
+                                    }
+                                oTable.fireSelectionChange({ listItems: [oItem], selected: true })
+                            } else {
+                                // iCount += e.Quantidade
+                            }
+                        })
+                    }
+                }
+            }
+        },
+
+        parseInt: function(sValue){
+            if(sValue == null || sValue == undefined || sValue == ""){
+                return 0;
+            }
+            try {
+                sValue = parseInt(sValue);
+                if(isNaN(sValue)){
+                    return 0;
+                }
+                return sValue;
+            }catch(e){
+                return 0;
+            }
+        },
+
+        onIncrease: function(oEvent){
+            var oInput = oEvent.getSource().getParent().getParent().getCells()[1];
+            if(!oInput.getEnabled()){
+                return;
+            }
+            var sValue = oInput.getValue();
+            var iValue = this.parseInt(sValue) + 1;
+            oInput.setValue(iValue);
+            oInput.fireChange({"newValue": ""+iValue});
+        },
+
+        onDecrease: function(oEvent){
+            var oInput = oEvent.getSource().getParent().getParent().getCells()[1];
+            if(!oInput.getEnabled()){
+                return;
+            }
+            
+            var sValue = oInput.getValue();
+            var iValue = this.parseInt(sValue) - 1;
+            if(iValue <= 0){
+                iValue = 0;
+            }
+            oInput.setValue(iValue);
+            oInput.fireChange({"newValue": ""+iValue});
         },
 
         onSelectDefeito: function (oEvent) {

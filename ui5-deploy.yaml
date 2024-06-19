@@ -20,6 +20,6 @@ builder:
           name: ZZ1_COLETORQUAL
           description: Coletor de Qualidade
           package: ZQM_COLETOR_CTRL_QUALIDADE
-          transport: S4DK9X19EW
+          transport: S4DK9X1D0Q
         exclude:
           - /test/
