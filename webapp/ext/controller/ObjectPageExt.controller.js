@@ -580,6 +580,7 @@ sap.ui.define([
         },
 
         onInspect: function (oEvent) {
+            let oController = this;
             let oView = this.getView()
             // let oObject = oView.byId(this.tableId).getSelectedItem().getBindingContext().getObject()
             let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
@@ -643,12 +644,108 @@ sap.ui.define([
                         // })
                         break;
                     case 'ZQM02':
-                        sPath = "/DefeitosFisico"
-                        oDialog.getParent().byId("idTblDefeito").getBinding("items").filter([new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)])
-                        oDialog.open()
+                        // DBR(VCD/AR) 20/06/2024
+                        // Verificando se o usuário fez a inseção visual antes da física
+                        oController.isInspecaoVisualExecutada(oObject,function(sResposta){
+                            if(sResposta == "S"){
+                                sPath = "/DefeitosFisico"
+                                oDialog.getParent().byId("idTblDefeito").getBinding("items").filter([new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)])
+                                oDialog.open()
+                            }else if(sResposta == ""){
+                                sap.m.MessageBox.alert("Erro ao verificar inspeção visual");
+                            }else{
+                                sap.m.MessageBox.alert("Inspeção visual não efetuada");
+                            }
+
+                            // caso o dialog não for exibido, é obrigatório destruir o mesmo
+                            if(sResposta != "S"){
+                                oDialog.close();
+                                oDialog.destroy();
+                                oView.removeAllDependents();
+                                oDialog = null;
+                            }
+                        });
                         break;
                     default:
                         break;
+                }
+            });
+        },
+
+        // DBR(VCD/AR) 20/06/2024
+        // Verifica se a inspeção visual foi executada para o lote atual
+        // Retornos possíveis char1
+        // S = Sim
+        // N = Não
+        // '' = Não foi possível avaliar
+        isInspecaoVisualExecutada: function(oObject,callback){
+            var oView   = this.getView();
+            var oOrder  = oView.getBindingContext().getObject();
+            var oParams = new URLSearchParams(window.location.search);
+            
+            /*
+            var aOrdens = [];
+            aOrdens.push("Plant='"+oOrder.Plant+"'");
+            aOrdens.push("WorkCenterLocation='"+oOrder.WorkCenterLocation+"'");
+            aOrdens.push("MachineType='"+oOrder.MachineType+"'");
+            aOrdens.push("Processo='"+oOrder.Processo+"'");
+            aOrdens.push("OrderID='"+oOrder.OrderID+"'");
+
+            var aLotes = [];
+            aLotes.push("sap-client="+oParams.get("sap-client"));
+            aLotes.push("$skip=0");
+            aLotes.push("$top=1");
+            aLotes.push("$filter=OperationStandardTextCode eq 'ZQM02' and InspectionLot eq '"+oObject.InspectionLot+"'");
+
+            var sURI = "/Ordens("+aOrdens.join(",")+")/to_Lotes?"+aLotes.join("&");
+            */
+
+            var sURI = "/Lotes("+
+                    "Plant='"+oOrder.Plant+"',"+
+                    "ManufacturingOrder='"+oOrder.OrderID+"',"+
+                    "InspectionLot='"+oObject.InspectionLot+"',"+
+                    "Material='"+oObject.Material+"',"+
+                    "OperationStandardTextCode='ZQM01'"+
+                    ")";
+
+                    //oView.getModel().setUseBatch(false);
+            
+            //var oModel = new sap.ui.model.odata.v2.ODataModel("/sap/opu/odata/sap/ZUI_O2_COLETOR_QUALIDADE/");
+            //oModel.setUseBatch(false);
+
+            oView.setBusy(true);
+            var oModel = oView.getModel();
+            oModel.read(sURI,{
+                /*
+                filters: [
+                    new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, oOrder.Plant),
+                    new sap.ui.model.Filter("ManufacturingOrder", sap.ui.model.FilterOperator.EQ, oOrder.OrderID),
+                    new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot),
+                    new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.EQ, oObject.Material),
+                    new sap.ui.model.Filter("OperationStandardTextCode", sap.ui.model.FilterOperator.EQ, "ZQM01")
+                ],
+                */
+                urlParameters: ["sap-client="+oParams.get("sap-client")],
+                success: function (oData, response) {
+                    //debugger;
+                    //if(oData.results[0].InspectionValuationResultCrit == 0){
+                    if(oData.InspectionValuationResultCrit == 0){
+                        callback("N");
+                    }else{
+                        callback("S");
+                    }
+
+                    //console.clear();
+                    //console.log(oData);
+                    //debugger;
+                    oView.setBusy(false);
+                },
+                error: function(oError){
+                    //console.clear();
+                    //console.log(oError);
+                    //debugger;
+                    callback("");
+                    oView.setBusy(false);
                 }
             });
         },
