@@ -646,7 +646,8 @@ sap.ui.define([
                     case 'ZQM02':
                         // DBR(VCD/AR) 20/06/2024
                         // Verificando se o usuário fez a inseção visual antes da física
-                        oController.isInspecaoVisualExecutada(oObject,function(sResposta){
+                        //oController.isInspecaoVisualExecutada(oObject,function(sResposta){
+                        oController.isInspecaoVisualExecutadaJQuery(oObject,function(sResposta){
                             if(sResposta == "S"){
                                 sPath = "/DefeitosFisico"
                                 oDialog.getParent().byId("idTblDefeito").getBinding("items").filter([new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)])
@@ -672,6 +673,57 @@ sap.ui.define([
             });
         },
 
+        // DBR(VCD/AR) 01/07/2024
+        // Foi feita uma versão usando jQuery diretamente pois usando batch não estava 
+        // sendo possível executar somente a request de verificação (sem alterar muita coisa no código),
+        // tentei desativar o batch porém o app começou a apresentar erros.
+        //
+        // Verifica se a inspeção visual foi executada para o lote atual
+        // Retornos possíveis char1
+        // S = Sim
+        // N = Não
+        // '' = Não foi possível avaliar
+        isInspecaoVisualExecutadaJQuery: function(oObject,callback){
+            var oView   = this.getView();
+            var oOrder  = oView.getBindingContext().getObject();
+            var oParams = new URLSearchParams(window.location.search);
+
+            // teste
+            var aOrdens = [];
+            aOrdens.push("Plant='"+oOrder.Plant+"'");
+            aOrdens.push("WorkCenterLocation='"+oOrder.WorkCenterLocation+"'");
+            aOrdens.push("MachineType='"+oOrder.MachineType+"'");
+            aOrdens.push("Processo='"+oOrder.Processo+"'");
+            aOrdens.push("OrderID='"+oOrder.OrderID+"'");
+
+            var aLotes = [];
+            aLotes.push("sap-client="+oParams.get("sap-client"));
+            aLotes.push("$skip=0");
+            aLotes.push("$top=1");
+            aLotes.push("$filter=OperationStandardTextCode eq 'ZQM02' and InspectionLot eq '"+oObject.InspectionLot+"'");
+            aLotes.push("$format=json");
+
+            var sURI = "/Ordens("+aOrdens.join(",")+")/to_Lotes?"+aLotes.join("&");
+
+            oView.setBusy(true);
+            jQuery.ajax({
+                url: "/sap/opu/odata/sap/ZUI_O2_COLETOR_QUALIDADE"+sURI,
+            }).done(function(oResponse) {
+                oView.setBusy(false);
+                try {
+                    var oData = oResponse.d.results[0];
+                    console.log(oData);
+                    if(oData.InspectionValuationResultCrit == 0){
+                        callback("N");
+                    }else{
+                        callback("S");
+                    }
+                }catch(e){
+                    callback("");
+                }
+            });
+        },
+
         // DBR(VCD/AR) 20/06/2024
         // Verifica se a inspeção visual foi executada para o lote atual
         // Retornos possíveis char1
@@ -682,7 +734,7 @@ sap.ui.define([
             var oView   = this.getView();
             var oOrder  = oView.getBindingContext().getObject();
             var oParams = new URLSearchParams(window.location.search);
-            
+
             /*
             var aOrdens = [];
             aOrdens.push("Plant='"+oOrder.Plant+"'");
