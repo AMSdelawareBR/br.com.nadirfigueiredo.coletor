@@ -700,7 +700,7 @@ sap.ui.define([
             aLotes.push("sap-client="+oParams.get("sap-client"));
             aLotes.push("$skip=0");
             aLotes.push("$top=1");
-            aLotes.push("$filter=OperationStandardTextCode eq 'ZQM02' and InspectionLot eq '"+oObject.InspectionLot+"'");
+            aLotes.push("$filter=OperationStandardTextCode eq 'ZQM01' and InspectionLot eq '"+oObject.InspectionLot+"'");
             aLotes.push("$format=json");
 
             var sURI = "/Ordens("+aOrdens.join(",")+")/to_Lotes?"+aLotes.join("&");
