@@ -580,10 +580,29 @@ sap.ui.define([
         },
 
         onInspect: function (oEvent) {
+            let that    = this;
+            let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
+
+            if(oObject.OperationStandardTextCode == "ZQM01"){
+                that.onInspect2(oObject);
+            }else if(oObject.OperationStandardTextCode == "ZQM02"){
+                this.isInspecaoVisualExecutada(oObject,function(sResposta){
+                    if(sResposta == "S"){
+                        that.onInspect2(oObject);
+                    }else if(sResposta == ""){
+                        sap.m.MessageBox.alert("Erro ao verificar inspeção visual");
+                    }else{
+                        sap.m.MessageBox.alert("Inspeção visual não efetuada");
+                    }
+                });
+            }
+        },
+
+        onInspect2: function (oObject) {
             let oController = this;
             let oView = this.getView()
             // let oObject = oView.byId(this.tableId).getSelectedItem().getBindingContext().getObject()
-            let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
+            //let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
 
             let oContext = oView.getBindingContext()
             // oListener.setSelectedItem(oListener.getSelectedItem(), false)
@@ -644,28 +663,9 @@ sap.ui.define([
                         // })
                         break;
                     case 'ZQM02':
-                        // DBR(VCD/AR) 20/06/2024
-                        // Verificando se o usuário fez a inseção visual antes da física
-                        //oController.isInspecaoVisualExecutada(oObject,function(sResposta){
-                        oController.isInspecaoVisualExecutadaJQuery(oObject,function(sResposta){
-                            if(sResposta == "S"){
-                                sPath = "/DefeitosFisico"
-                                oDialog.getParent().byId("idTblDefeito").getBinding("items").filter([new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)])
-                                oDialog.open()
-                            }else if(sResposta == ""){
-                                sap.m.MessageBox.alert("Erro ao verificar inspeção visual");
-                            }else{
-                                sap.m.MessageBox.alert("Inspeção visual não efetuada");
-                            }
-
-                            // caso o dialog não for exibido, é obrigatório destruir o mesmo
-                            if(sResposta != "S"){
-                                oDialog.close();
-                                oDialog.destroy();
-                                oView.removeAllDependents();
-                                oDialog = null;
-                            }
-                        });
+                        sPath = "/DefeitosFisico"
+                        oDialog.getParent().byId("idTblDefeito").getBinding("items").filter([new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)])
+                        oDialog.open()
                         break;
                     default:
                         break;
@@ -673,6 +673,10 @@ sap.ui.define([
             });
         },
 
+        // DBR(VCD/AR) 02/07/2024
+        // Problema detectado no coletor Honeywell, quando a requisição é feita, o login é solicitado novamente. 
+        // No PC e nos Smartphones, isso não ocorre.
+        // 
         // DBR(VCD/AR) 01/07/2024
         // Foi feita uma versão usando jQuery diretamente pois usando batch não estava 
         // sendo possível executar somente a request de verificação (sem alterar muita coisa no código),
@@ -767,6 +771,9 @@ sap.ui.define([
 
             oView.setBusy(true);
             var oModel = oView.getModel();
+            //oModel.setUseBatch(false);
+            //sURI = "/Qamr(Prueflos='"+oObject.InspectionLot+"')";
+            //oModel.resetChanges();
             oModel.read(sURI,{
                 /*
                 filters: [
