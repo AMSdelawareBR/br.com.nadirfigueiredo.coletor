@@ -55,10 +55,10 @@
                 <headerToolbar>
                     <OverflowToolbar>
                         <ToolbarSpacer />
-                        <SearchField
-                            liveChange=".onSearchDefeitos"
-                            width="50%"
-                        />
+                        
+                        <!--<SearchField liveChange=".onSearchDefeitos" width="50%" />-->
+                        <SearchField change=".onSearchDefeitos" width="50%" />
+
                         <ToolbarSpacer />
                     </OverflowToolbar>
                 </headerToolbar>
@@ -69,17 +69,19 @@
                     <Column>
                         <Text text="Quantidades" />
                     </Column>
+                    <Column>
+                        <Text text="Opções" />
+                    </Column>
                 </columns>
                 <items>
                     <ColumnListItem>
                         <cells>
                             <Text text="{MfgActionReasonCodeName}" />
-                            <Input
-                                enabled="false"
-                                type="Number"
-                                value="{= ${NumberOfDefects} !== 0 ? ${NumberOfDefects} : 0 }"
-                                change=".onInputNC"
-                            />
+                            <Input enabled="false" type="Number" value="{= ${NumberOfDefects} !== 0 ? ${NumberOfDefects} : 0 }" change=".onInputNC" class="zquantidade1" fieldGroupIds="zquantidade2" />
+                            <HBox>
+                                <Button icon="sap-icon://sys-add" press="onIncrease"/>
+                                <Button icon="sap-icon://sys-minus" press="onDecrease" class="sapUiTinyMarginBegin"/>
+                            </HBox>
                         </cells>
                     </ColumnListItem>
                 </items>

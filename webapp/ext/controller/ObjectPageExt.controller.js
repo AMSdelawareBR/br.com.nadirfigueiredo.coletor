@@ -1,3 +1,20 @@
+/*
+jQuery(document).on('click',".zinputLimitFisico input",function(){
+    var oInput          = jQuery(this);
+    var oTr             = oInput.parent().parent().parent().parent();
+    var sCaracteristica = oTr.find(".zcaracteristica").text();
+    
+    sap.ui.core.BusyIndicator.show(1);
+    setTimeout(function(){
+        var sValor = prompt("Informe o campo "+sCaracteristica,oInput.val());
+        if(sValor != null){
+            oInput.val(sValor);
+        }
+        sap.ui.core.BusyIndicator.hide();
+    },1);
+});
+*/
+
 sap.ui.define([
     "sap/m/MessageToast",
     "sap/ndc/BarcodeScanner"
@@ -9,7 +26,18 @@ sap.ui.define([
         tableId: "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--LotCt::responsiveTable",
 
         onInit: function (oEvent) {
+            //window.oTable = this.getView().byId(this.tableId);
+        },
 
+        onFormatLimite: function(sValue){
+            let sValue2 = sValue;
+            if(sValue2 == "0.000" || sValue2 == "0,000" || sValue2 == "0"){
+                sValue2 = "";
+            }
+
+            //console.log(sValue+" <---> "+sValue2);
+
+            return sValue2;
         },
 
         onAfterRendering: function (oEvent) {
@@ -25,15 +53,38 @@ sap.ui.define([
                 oTable.setGrowingScrollToLoad(true)
 
                 oTable.attachSelect(function (oEvent) {
+                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === '')){
+                        try{
+                            this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("UserDecision"))[0].setEnabled(false)
+                        }catch(e){
+                            // DBR(VCD) 31/05/2024
+                            // Tentando desabilitar o botão usando ID pois no coletor (Honeywell), o método getHeaderToolbar esta retornando null
+                            var sButtonId = "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--onUserDecision";
+                            this.getView().byId(sButtonId).setEnabled(false);
+                        }
+                    }
 
-                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === ''))
-                        this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("UserDecision"))[0].setEnabled(false)
+                    if (oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === '')){
+                        try{
+                          this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Imprimir"))[0].setEnabled(false);
+                        }catch(e){
+                            // DBR(VCD) 31/05/2024
+                            // Tentando desabilitar o botão usando ID pois no coletor (Honeywell), o método getHeaderToolbar esta retornando null
+                            var sButtonId = "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--onImprimirButton";
+                            this.getView().byId(sButtonId).setEnabled(false);
+                        }
+                    }
 
-                    if (oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsPrinted === false && s.getObject().InspectionValuationResult === ''))
-                        this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Imprimir"))[0].setEnabled(false)
-
-                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsSkipAllowed === false))
-                        this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Skip"))[0].setEnabled(false)
+                    if (oEvent.getSource().getSelectedContexts().length != 1 || oEvent.getSource().getSelectedContexts().some((s) => s.getObject().IsSkipAllowed === false)){
+                        try{
+                            this.getView().byId(this.tableId).getHeaderToolbar().getContent().filter((s) => s instanceof sap.m.Button && s.getId().includes("Skip"))[0].setEnabled(false)
+                        }catch(e){
+                            // DBR(VCD) 29/05/2024
+                            // Tentando desabilitar o botão usando ID pois no coletor (Honeywell), o método getHeaderToolbar esta retornando null
+                            var sButtonId = "br.com.nadirfigueiredo.qualidadecoletor::sap.suite.ui.generic.template.ObjectPage.view.Details::Ordens--onSkipButton";
+                            this.getView().byId(sButtonId).setEnabled(false);
+                        }
+                    }
 
                 }.bind(this))
             }
@@ -82,13 +133,21 @@ sap.ui.define([
             let oView = this.getView()
             let oObject = oView.getBindingContext().getObject()
 
-            if (oObject.ConfirmationLimit) {
+            // DBR(VCD) 28/03/2024 Funcional: Andreia
+            // Contando quantas linhas tem na tabela
+            let oTable = this.getView().byId(this.tableId);
+            let iLines = oTable.getItems().length;
+
+            //if (oObject.ConfirmationLimit) {
+            if (iLines >= oObject.ConfirmationLimitAdmin) {
                 sap.m.MessageBox.alert(this.getOwnerComponent().getModel("i18n").getResourceBundle().getText("ConfirmationLimit"))
                 return
             }
 
             this.createDialog(oView, "br.com.nadirfigueiredo.qualidadecoletor.ext.view.confirmation").then(function (oDialog) {
-                oDialog.getSubHeader().setVisible(oObject.Manager)
+                // DBR(VCD) 30/03/2024 - Não exibindo a parte de mudança de datas
+                oDialog.getSubHeader().setVisible(false)
+                //oDialog.getSubHeader().setVisible(oObject.Manager)
 
                 oDialog.open()
             });
@@ -159,7 +218,13 @@ sap.ui.define([
                         DataConf: oSwitchDate.getState() ? oDateConf.getDateValue().toISOString() : new Date().toISOString()
                     },
                     success: function (oData, response) {
-                        oTable.refreshAggregation("items")
+                        // DBR(VCD) 09/04/2024
+                        // Caso a tabela não esteja visivel da tela, esse refresh não vai funcionar como é o caso do coletor 
+                        // que tem tela pequena. Dessa forma, o sistema vai ignorar o erro
+                        try {
+                            oTable.refreshAggregation("items")
+                        }catch(e){
+                        }
                         oView.getModel().refresh(true)
                         oApi.refresh()
                         oView.setBusy(false)
@@ -382,13 +447,26 @@ sap.ui.define([
                                 oView.getModel().read("/DefeitosVisual2",
                                     {
                                         filters: [new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot)],
+                                        urlParameters: ["$top=1000"], // DBR(VCD) 12/04/2024
                                         success: function (oData, response) {
-                                            oDialog.getButtons()[2].firePress({ "noMsg": oData.results[0].UD })
-                                            if (oData.results[0].UD)
+                                            // DBR(VCD) 22/03/2024 Funcional: Michele
+                                            // O Popup deve ser exibido se qualquer linha tiver X no UD e não somente a primeira
+                                            var UD = "";
+                                            for(var zi in oData.results){
+                                                if(oData.results[zi].UD == 'X'){
+                                                    UD = "X";
+                                                    break;
+                                                }
+                                            }
+                                            oDialog.getButtons()[2].firePress({ "noMsg": UD })
+                                            //oDialog.getButtons()[2].firePress({ "noMsg": oData.results[0].UD })
+                                            if (UD)
+                                            //if (oData.results[0].UD)
                                                 that.showMessages(that.buildMessages(oResponse),
                                                     {
                                                         InspectionLot: oObject.InspectionLot,
-                                                        hasDU: oData.results[0].UD
+                                                        //hasDU: oData.results[0].UD
+                                                        hasDU: UD
                                                     }
                                                 )
                                             oDialog.setBusy(false)
@@ -502,9 +580,29 @@ sap.ui.define([
         },
 
         onInspect: function (oEvent) {
+            let that    = this;
+            let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
+
+            if(oObject.OperationStandardTextCode == "ZQM01"){
+                that.onInspect2(oObject);
+            }else if(oObject.OperationStandardTextCode == "ZQM02"){
+                this.isInspecaoVisualExecutada(oObject,function(sResposta){
+                    if(sResposta == "S"){
+                        that.onInspect2(oObject);
+                    }else if(sResposta == ""){
+                        sap.m.MessageBox.alert("Erro ao verificar inspeção visual");
+                    }else{
+                        sap.m.MessageBox.alert("Inspeção visual não efetuada");
+                    }
+                });
+            }
+        },
+
+        onInspect2: function (oObject) {
+            let oController = this;
             let oView = this.getView()
             // let oObject = oView.byId(this.tableId).getSelectedItem().getBindingContext().getObject()
-            let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
+            //let oObject = oEvent.getSource().getParent().getParent().getBindingContext().getObject()
 
             let oContext = oView.getBindingContext()
             // oListener.setSelectedItem(oListener.getSelectedItem(), false)
@@ -529,8 +627,17 @@ sap.ui.define([
 
                 oControl.addAttribute(new sap.m.ObjectAttribute({ text: oView.getBindingContext().getObject().WorkCenterLocation }).bindProperty("title", "i18n>Linha"))
                 oControl.addAttribute(new sap.m.ObjectAttribute({ text: oView.getBindingContext().getObject().ArticleValue }).bindProperty("title", "i18n>Artigo"))
-                oDialog.getParent().byId("idTblDefeito").getModel().setSizeLimit(5000)
+                
+                // DBR(VCD) 11/03/2024 Funcional: Andreia
+                // Limitando registros para não causar lentidão
+                oDialog.getParent().byId("idTblDefeito").getModel().setSizeLimit(10)
+
                 oDialog.getParent().byId("idTblDefeito").setSticky([sap.m.Sticky.ColumnHeaders, sap.m.Sticky.HeaderToolbar])
+
+                // DBR(VCD) 22/03/2024 Funcional: Michele
+                if(oObject.OperationStandardTextCode == "ZQM02"){
+                    oDialog.getParent().byId("idOper").getModel().setSizeLimit(100)
+                }
 
                 switch (oObject.OperationStandardTextCode) {
                     case 'ZQM01':
@@ -562,6 +669,142 @@ sap.ui.define([
                         break;
                     default:
                         break;
+                }
+            });
+        },
+
+        // DBR(VCD/AR) 02/07/2024
+        // Problema detectado no coletor Honeywell, quando a requisição é feita, o login é solicitado novamente. 
+        // No PC e nos Smartphones, isso não ocorre.
+        // 
+        // DBR(VCD/AR) 01/07/2024
+        // Foi feita uma versão usando jQuery diretamente pois usando batch não estava 
+        // sendo possível executar somente a request de verificação (sem alterar muita coisa no código),
+        // tentei desativar o batch porém o app começou a apresentar erros.
+        //
+        // Verifica se a inspeção visual foi executada para o lote atual
+        // Retornos possíveis char1
+        // S = Sim
+        // N = Não
+        // '' = Não foi possível avaliar
+        isInspecaoVisualExecutadaJQuery: function(oObject,callback){
+            var oView   = this.getView();
+            var oOrder  = oView.getBindingContext().getObject();
+            var oParams = new URLSearchParams(window.location.search);
+
+            // teste
+            var aOrdens = [];
+            aOrdens.push("Plant='"+oOrder.Plant+"'");
+            aOrdens.push("WorkCenterLocation='"+oOrder.WorkCenterLocation+"'");
+            aOrdens.push("MachineType='"+oOrder.MachineType+"'");
+            aOrdens.push("Processo='"+oOrder.Processo+"'");
+            aOrdens.push("OrderID='"+oOrder.OrderID+"'");
+
+            var aLotes = [];
+            aLotes.push("sap-client="+oParams.get("sap-client"));
+            aLotes.push("$skip=0");
+            aLotes.push("$top=1");
+            aLotes.push("$filter=OperationStandardTextCode eq 'ZQM01' and InspectionLot eq '"+oObject.InspectionLot+"'");
+            aLotes.push("$format=json");
+
+            var sURI = "/Ordens("+aOrdens.join(",")+")/to_Lotes?"+aLotes.join("&");
+
+            oView.setBusy(true);
+            jQuery.ajax({
+                url: "/sap/opu/odata/sap/ZUI_O2_COLETOR_QUALIDADE"+sURI,
+            }).done(function(oResponse) {
+                oView.setBusy(false);
+                try {
+                    var oData = oResponse.d.results[0];
+                    console.log(oData);
+                    if(oData.InspectionValuationResultCrit == 0){
+                        callback("N");
+                    }else{
+                        callback("S");
+                    }
+                }catch(e){
+                    callback("");
+                }
+            });
+        },
+
+        // DBR(VCD/AR) 20/06/2024
+        // Verifica se a inspeção visual foi executada para o lote atual
+        // Retornos possíveis char1
+        // S = Sim
+        // N = Não
+        // '' = Não foi possível avaliar
+        isInspecaoVisualExecutada: function(oObject,callback){
+            var oView   = this.getView();
+            var oOrder  = oView.getBindingContext().getObject();
+            var oParams = new URLSearchParams(window.location.search);
+
+            /*
+            var aOrdens = [];
+            aOrdens.push("Plant='"+oOrder.Plant+"'");
+            aOrdens.push("WorkCenterLocation='"+oOrder.WorkCenterLocation+"'");
+            aOrdens.push("MachineType='"+oOrder.MachineType+"'");
+            aOrdens.push("Processo='"+oOrder.Processo+"'");
+            aOrdens.push("OrderID='"+oOrder.OrderID+"'");
+
+            var aLotes = [];
+            aLotes.push("sap-client="+oParams.get("sap-client"));
+            aLotes.push("$skip=0");
+            aLotes.push("$top=1");
+            aLotes.push("$filter=OperationStandardTextCode eq 'ZQM02' and InspectionLot eq '"+oObject.InspectionLot+"'");
+
+            var sURI = "/Ordens("+aOrdens.join(",")+")/to_Lotes?"+aLotes.join("&");
+            */
+
+            var sURI = "/Lotes("+
+                    "Plant='"+oOrder.Plant+"',"+
+                    "ManufacturingOrder='"+oOrder.OrderID+"',"+
+                    "InspectionLot='"+oObject.InspectionLot+"',"+
+                    "Material='"+oObject.Material+"',"+
+                    "OperationStandardTextCode='ZQM01'"+
+                    ")";
+
+                    //oView.getModel().setUseBatch(false);
+            
+            //var oModel = new sap.ui.model.odata.v2.ODataModel("/sap/opu/odata/sap/ZUI_O2_COLETOR_QUALIDADE/");
+            //oModel.setUseBatch(false);
+
+            oView.setBusy(true);
+            var oModel = oView.getModel();
+            //oModel.setUseBatch(false);
+            //sURI = "/Qamr(Prueflos='"+oObject.InspectionLot+"')";
+            //oModel.resetChanges();
+            oModel.read(sURI,{
+                /*
+                filters: [
+                    new sap.ui.model.Filter("Plant", sap.ui.model.FilterOperator.EQ, oOrder.Plant),
+                    new sap.ui.model.Filter("ManufacturingOrder", sap.ui.model.FilterOperator.EQ, oOrder.OrderID),
+                    new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, oObject.InspectionLot),
+                    new sap.ui.model.Filter("Material", sap.ui.model.FilterOperator.EQ, oObject.Material),
+                    new sap.ui.model.Filter("OperationStandardTextCode", sap.ui.model.FilterOperator.EQ, "ZQM01")
+                ],
+                */
+                urlParameters: ["sap-client="+oParams.get("sap-client")],
+                success: function (oData, response) {
+                    //debugger;
+                    //if(oData.results[0].InspectionValuationResultCrit == 0){
+                    if(oData.InspectionValuationResultCrit == 0){
+                        callback("N");
+                    }else{
+                        callback("S");
+                    }
+
+                    //console.clear();
+                    //console.log(oData);
+                    //debugger;
+                    oView.setBusy(false);
+                },
+                error: function(oError){
+                    //console.clear();
+                    //console.log(oError);
+                    //debugger;
+                    callback("");
+                    oView.setBusy(false);
                 }
             });
         },
@@ -644,15 +887,26 @@ sap.ui.define([
                 if (iIdx >= 0)
                     aFilters.splice(iIdx, 1)
             }
-            if (sQuery && sQuery.length > 0)
+            if (sQuery && sQuery.length > 0){
                 aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.Contains, sQuery))
+                //oEvent.getSource().getParent().getParent().getModel().setSizeLimit(100) // DBR(VCD)
 
+                if (oModel) {
+                    oContext = oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
+                    for (let oDefeito of oContext.to_Defeitos)
+                        aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.EQ, oDefeito.MfgActionReasonCodeName))
+                }
+            }else{
+                //oEvent.getSource().getParent().getParent().getModel().setSizeLimit(10) // DBR(VCD)
+            }
+            /*
             if (oModel) {
                 oContext = oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
                 for (let oDefeito of oContext.to_Defeitos)
                     aFilters.push(new sap.ui.model.Filter("MfgActionReasonCodeName", sap.ui.model.FilterOperator.EQ, oDefeito.MfgActionReasonCodeName))
             }
-
+            */
+            
             oEvent.getSource().getParent().getParent().getBinding("items").filter(aFilters)
             oEvent.getSource().setValue(sQuery)
         },
@@ -664,9 +918,12 @@ sap.ui.define([
             let oTable = oEvent.getSource()
 
             oTable.getParent().getParent().setBusy(true)
-            switch (oEvent.getParameter("reason")) {
+
+            var sReason = oEvent.getParameter("reason");
+            switch (sReason) {
                 case 'Filter':
                     this.getView().byId("idVisualNC").setBusy(false)
+                    this.onFillQuantity(oEvent);
                     break;
                 case 'Refresh':
 
@@ -675,9 +932,10 @@ sap.ui.define([
                         let aFilters = oTable.getBinding("items").aFilters
                         if (!aFilters) aFilters = []
                         if (oTable.getBinding("items").getContexts().some((s) => s.getObject().InspectionLot == oObject.InspectionLot)) {
-
-                            oTable.setMode(sap.m.ListMode.None)
-                            oTable.getParent().getParent().getBeginButton().setVisible(false)
+                            // DBR(VCD) 10/06/2024
+                            // em PRD, esta entrando no IF ao carregar o dialog, em QAS não esta acontecendo isso
+                            //oTable.setMode(sap.m.ListMode.None)
+                            //oTable.getParent().getParent().getBeginButton().setVisible(false)
                         }
                         // } else {
                         //     aFilters.push(new sap.ui.model.Filter("InspectionLot", sap.ui.model.FilterOperator.EQ, '000000000000'))
@@ -759,6 +1017,93 @@ sap.ui.define([
             // oTable.getParent().getParent().setBusy(false)
         },
 
+        // DBR(VCD) 11/06/2024
+        // Recarregando os valores da quantidade
+        onFillQuantity: function(oEvent){
+            let oObject
+            let iCount
+            let oModel
+            let oTable = oEvent.getSource()
+
+            iCount = 0;
+            oObject = oTable.getBindingContext()?.getObject()
+            oModel = this.getView().getModel("Defeitos")?.getData()
+
+            oObject.to_Defeitos = []
+            // oObject.InspectionLot = 
+            if (!oModel) {
+                oModel = []
+                oModel.push(oObject)
+            } else {
+                if (!oModel.find(e => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata'))))
+                    oModel.push(oObject)
+                else {
+                    oObject = oModel.find((e) => JSON.stringify(e, Object.keys(e).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')) == JSON.stringify(oObject, Object.keys(oObject).filter((k) => k !== 'to_Defeitos' && k !== '__metadata')))
+                    if (oObject) {
+                        oObject.to_Defeitos.forEach((e) => {
+                            let oItem = oTable.getItems().find((f) => !f.isGroupHeader() && JSON.stringify(e, Object.keys(e).filter((k) => k !== 'InspectionLot' && k !== 'Quantidade' && k !== '__metadata')) == JSON.stringify(f.getBindingContext().getObject(), Object.keys(f.getBindingContext().getObject()).filter((k) => k !== 'InspectionLot' && k !== 'Quantidade' && k !== '__metadata')))
+                            if (oItem) {
+                                oTable.setSelectedItem(oItem, true)
+                                for (let oControl of oItem.getCells())
+                                    if (oControl instanceof sap.m.Input) {
+                                        let iValue = Number.parseInt(e.Quantidade)
+                                        if (iValue > 0) {
+                                            oControl.setValue(iValue)
+                                            oControl.focus()
+                                            // iCount += iValue
+                                        }
+                                    }
+                                oTable.fireSelectionChange({ listItems: [oItem], selected: true })
+                            } else {
+                                // iCount += e.Quantidade
+                            }
+                        })
+                    }
+                }
+            }
+        },
+
+        parseInt: function(sValue){
+            if(sValue == null || sValue == undefined || sValue == ""){
+                return 0;
+            }
+            try {
+                sValue = parseInt(sValue);
+                if(isNaN(sValue)){
+                    return 0;
+                }
+                return sValue;
+            }catch(e){
+                return 0;
+            }
+        },
+
+        onIncrease: function(oEvent){
+            var oInput = oEvent.getSource().getParent().getParent().getCells()[1];
+            if(!oInput.getEnabled()){
+                return;
+            }
+            var sValue = oInput.getValue();
+            var iValue = this.parseInt(sValue) + 1;
+            oInput.setValue(iValue);
+            oInput.fireChange({"newValue": ""+iValue});
+        },
+
+        onDecrease: function(oEvent){
+            var oInput = oEvent.getSource().getParent().getParent().getCells()[1];
+            if(!oInput.getEnabled()){
+                return;
+            }
+            
+            var sValue = oInput.getValue();
+            var iValue = this.parseInt(sValue) - 1;
+            if(iValue <= 0){
+                iValue = 0;
+            }
+            oInput.setValue(iValue);
+            oInput.fireChange({"newValue": ""+iValue});
+        },
+
         onSelectDefeito: function (oEvent) {
             let oContext = oEvent.getSource().getBindingContext().getObject()
             for (let oItem of oEvent.getParameter("listItems"))
@@ -779,23 +1124,54 @@ sap.ui.define([
                         }
         },
 
+        // DBR(VCD) 22/04/2024
+        onInputLimiteChange: function(oEvent){
+            let sValue = oEvent.getSource().getValue();
+            if(sValue == "0.000"){
+                oEvent.getSource().setValue("");
+            }
+        },
+
         onInputLimite: function (oEvent) {
+            let sValue = oEvent.getSource().getValue();
             let fValue = Number.parseFloat(oEvent.getSource().getValue())
             let oContext = oEvent.getSource().getBindingContext().getObject()
-            if (oContext.InspSpecTargetValue != 0)
-                if (fValue < oContext.InspSpecLowerLimit || fValue > oContext.InspSpecUpperLimit) {
+
+            // DBR(VCD) 22/04/2024
+            if(sValue == "0.000"){
+                oEvent.getSource().setValue("");
+                return;
+            }
+
+            // DBR(VCD) 10/05/2024
+            var fInspSpecTargetValue = parseFloat(oContext.InspSpecTargetValue);
+            var fInspSpecLowerLimit  = parseFloat(oContext.InspSpecLowerLimit);
+            var fInspSpecUpperLimit  = parseFloat(oContext.InspSpecUpperLimit);
+
+            //if (oContext.InspSpecTargetValue != 0){
+            if (fInspSpecTargetValue != 0 || fInspSpecLowerLimit != 0 || fInspSpecUpperLimit != 0){
+
+                // DBR(VCD) 16/05/2024
+                //if (fValue < oContext.InspSpecLowerLimit || fValue > oContext.InspSpecUpperLimit) {
+                if ((fInspSpecLowerLimit != 0 && fValue < fInspSpecLowerLimit) || (fInspSpecUpperLimit != 0 && fValue > fInspSpecUpperLimit)) {
                     oEvent.getSource().setValueState("Error")
                     oEvent.getSource().setValueStateText(this.getOwnerComponent().getModel("i18n").getResourceBundle().getText("Tolerancia"))
                 }
                 else {
                     oEvent.getSource().setValueState("Success")
                 }
-            else
+            }else{
                 if (!fValue) {
                     oEvent.getSource().setValueState("Warning")
                 } else {
                     oEvent.getSource().setValueState("None")
                 }
+            }
+
+            // DBR(VCD) 22/03/2024
+            if (fValue == 0 || fValue == 0.000){
+                oEvent.getSource().setValue("");
+            }
         },
 
         onInputNC: function (oEvent) {
@@ -967,10 +1343,17 @@ sap.ui.define([
                     press: function (oEvent) {
                         this.getParent().close();
                         if (oObject) {
-                            that.createDialog(oView, "br.com.nadirfigueiredo.qualidadecoletor.ext.view.du").then(function (oDialog) {
-                                oDialog.addCustomData(new sap.ui.core.CustomData({ key: "InspectionLot", value: oObject.InspectionLot }))
-                                oDialog.open()
-                            });
+                            if(!that.DUDialog){ // DBR(VCD) 21/03/2024
+                                that.createDialog(oView, "br.com.nadirfigueiredo.qualidadecoletor.ext.view.du").then(function (oDialog) {
+                                    oDialog.addCustomData(new sap.ui.core.CustomData({ key: "InspectionLot", value: oObject.InspectionLot }))
+                                    that.DUDialog = oDialog;// DBR(VCD) 21/03/2024
+                                    oDialog.open()
+                                });
+                            }else{// DBR(VCD) 21/03/2024
+                                that.DUDialog.destroyCustomData();
+                                that.DUDialog.addCustomData(new sap.ui.core.CustomData({ key: "InspectionLot", value: oObject.InspectionLot }));
+                                that.DUDialog.open();
+                            }
                         }
                     },
                     text: "Fechar"
@@ -1178,7 +1561,13 @@ sap.ui.define([
                     method: 'POST',
                     urlParameters: {
                         Plant: oObject.Plant,
-                        InspectionLot: oObject.InspectionLot
+
+                        // DBR(VCD) 29/05/2024
+                        // Enviando ao backend o código de barras digitado e não o lote da linha
+                        // para resolver bug no coletor
+                        //InspectionLot: oObject.InspectionLot
+                        InspectionLot: oEvent.getSource().getValue()
+
                     },
                     success: function (oData, response) {
                         oDialog.setBusy(false)
